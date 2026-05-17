@@ -1,0 +1,228 @@
+{
+  "name": "Purga Drive Total - Panel",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "purga-drive-total",
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, message: 'Purga total iniciada con paginacion completa' }) }}",
+        "options": {}
+      },
+      "name": "Webhook Panel",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [0, 0],
+      "webhookId": "purga-drive-total",
+      "id": "eed571d2-8556-49ac-831c-9f88bae953d4"
+    },
+
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/drive/v3/files",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "pageSize", "value": "1000" },
+            { "name": "fields", "value": "nextPageToken, files(id, name)" },
+            { "name": "q", "value": "trashed = false" }
+          ]
+        },
+        "options": {
+          "pagination": {
+            "pagination": {
+              "paginationMode": "updateAParameterInEachRequest",
+              "parameters": {
+                "parameters": [
+                  {
+                    "name": "pageToken",
+                    "value": "={{ $response.body.nextPageToken }}"
+                  }
+                ]
+              },
+              "paginationCompleteWhen": "other",
+              "completeExpression": "={{ !$response.body.nextPageToken }}",
+              "limitPagesFetched": false,
+              "maxRequests": 200
+            }
+          }
+        }
+      },
+      "name": "Listar TODOS Activos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [260, -120],
+      "id": "list-active-001",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "XXfqb1Ajzkr6Ayzk",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst allFiles = [];\nfor (const item of items) {\n  const files = item.json.files || [];\n  allFiles.push(...files);\n}\nconsole.log(`Total archivos activos encontrados: ${allFiles.length}`);\nif (allFiles.length === 0) return [];\nreturn allFiles.map(f => ({ json: { fileId: f.id, fileName: f.name } }));\n"
+      },
+      "name": "Extraer Activos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, -120],
+      "id": "extract-active-001"
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "=https://www.googleapis.com/drive/v3/files/{{ $json.fileId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "batching": {
+            "batch": {
+              "batchSize": 50,
+              "batchInterval": 1000
+            }
+          }
+        }
+      },
+      "name": "Borrar Activos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [740, -120],
+      "id": "delete-active-001",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "XXfqb1Ajzkr6Ayzk",
+          "name": "Google Drive account"
+        }
+      }
+    },
+
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/drive/v3/files",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "pageSize", "value": "1000" },
+            { "name": "fields", "value": "nextPageToken, files(id, name)" },
+            { "name": "q", "value": "trashed = true" }
+          ]
+        },
+        "options": {
+          "pagination": {
+            "pagination": {
+              "paginationMode": "updateAParameterInEachRequest",
+              "parameters": {
+                "parameters": [
+                  {
+                    "name": "pageToken",
+                    "value": "={{ $response.body.nextPageToken }}"
+                  }
+                ]
+              },
+              "paginationCompleteWhen": "other",
+              "completeExpression": "={{ !$response.body.nextPageToken }}",
+              "limitPagesFetched": false,
+              "maxRequests": 200
+            }
+          }
+        }
+      },
+      "name": "Listar TODA Papelera",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [260, 120],
+      "id": "list-trash-001",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "XXfqb1Ajzkr6Ayzk",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst allFiles = [];\nfor (const item of items) {\n  const files = item.json.files || [];\n  allFiles.push(...files);\n}\nconsole.log(`Total archivos en papelera: ${allFiles.length}`);\nif (allFiles.length === 0) return [];\nreturn allFiles.map(f => ({ json: { fileId: f.id, fileName: f.name } }));\n"
+      },
+      "name": "Extraer Papelera",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 120],
+      "id": "extract-trash-001"
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "=https://www.googleapis.com/drive/v3/files/{{ $json.fileId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "batching": {
+            "batch": {
+              "batchSize": 50,
+              "batchInterval": 1000
+            }
+          }
+        }
+      },
+      "name": "Borrar Papelera",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [740, 120],
+      "id": "delete-trash-001",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "XXfqb1Ajzkr6Ayzk",
+          "name": "Google Drive account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Panel": {
+      "main": [
+        [
+          { "node": "Listar TODOS Activos", "type": "main", "index": 0 },
+          { "node": "Listar TODA Papelera", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Listar TODOS Activos": {
+      "main": [[{ "node": "Extraer Activos", "type": "main", "index": 0 }]]
+    },
+    "Extraer Activos": {
+      "main": [[{ "node": "Borrar Activos", "type": "main", "index": 0 }]]
+    },
+    "Listar TODA Papelera": {
+      "main": [[{ "node": "Extraer Papelera", "type": "main", "index": 0 }]]
+    },
+    "Extraer Papelera": {
+      "main": [[{ "node": "Borrar Papelera", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "c114ee45638609b7a2777675a37a3cc64238effc8dda6ddee8bd745b5af3012f"
+  },
+  "tags": []
+}

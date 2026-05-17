@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>n8n Webhook Controller</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            transition: background 0.3s ease;
+        }
+        
+        body.theme-dark {
+            background: linear-gradient(135deg, #0a0a12 0%, #12121a 50%, #18182a 100%);
+            color: #e8e8f0;
+        }
+        
+        body.theme-light {
+            background: linear-gradient(135deg, #f8f9fc 0%, #f1f3f8 50%, #e9ecf3 100%);
+            color: #1a1a2e;
+        }
+        
+        .app-wrapper { display: flex; min-height: 100vh; }
+        
+        .sidebar {
+            width: 280px;
+            background: rgba(18, 18, 26, 0.7);
+            -webkit-backdrop-filter: blur(16px);
+            backdrop-filter: blur(16px);
+            border-right: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 2rem 1rem;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+        }
+        
+        body.theme-light .sidebar {
+            background: rgba(255, 255, 255, 0.7);
+            border-right: 1px solid rgba(0, 0, 0, 0.06);
+        }
+        
+        .logo-area { padding: 0 0.75rem 1.5rem; margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.06); }
+        .logo { font-size: 1.3rem; font-weight: 700; background: linear-gradient(135deg, #818cf8, #c084fc); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+        .logo small { font-size: 0.7rem; font-weight: 400; opacity: 0.5; display: block; -webkit-text-fill-color: initial; color: inherit; }
+        
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            padding: 0.7rem 0.9rem;
+            margin: 0.25rem 0;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: rgba(232, 232, 240, 0.7);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        body.theme-light .nav-item { color: rgba(26, 26, 46, 0.7); }
+        .nav-item:hover { background: rgba(99, 102, 241, 0.15); color: #e8e8f0; }
+        .nav-item.active { background: rgba(99, 102, 241, 0.2); color: #a78bfa; }
+        
+        .main-content { flex: 1; padding: 2rem 2.5rem; max-width: calc(100% - 280px); }
+        
+        .header { text-align: center; margin-bottom: 2rem; }
+        .badge { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.4rem 1rem; background: rgba(99, 102, 241, 0.15); border-radius: 100px; font-size: 0.7rem; margin-bottom: 1rem; }
+        .badge-dot { width: 7px; height: 7px; background: #22c55e; border-radius: 50%; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; transform: scale(1.2); } }
+        h1 { font-size: clamp(1.8rem, 4vw, 2.8rem); font-weight: 600; letter-spacing: -0.02em; background: linear-gradient(135deg, #818cf8, #c084fc, #22d3ee); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+        .subtitle { font-size: 0.85rem; opacity: 0.65; }
+        
+        .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+        
+        .workflow-card {
+            background: rgba(255, 255, 255, 0.03);
+            -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 24px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .workflow-card:hover { transform: translateY(-4px); border-color: rgba(99, 102, 241, 0.4); }
+        .card-icon { width: 48px; height: 48px; background: rgba(99, 102, 241, 0.15); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; margin-bottom: 1rem; }
+        .card-title { font-size: 1.15rem; font-weight: 600; margin-bottom: 0.5rem; }
+        .card-desc { font-size: 0.8rem; opacity: 0.65; margin-bottom: 1rem; }
+        .card-meta { display: flex; align-items: center; justify-content: space-between; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.06); }
+        .method { font-size: 0.65rem; font-weight: 600; padding: 0.2rem 0.6rem; border-radius: 20px; background: rgba(34, 197, 94, 0.15); font-family: monospace; }
+        .exec-btn { background: rgba(99, 102, 241, 0.9); border: none; padding: 0.4rem 1rem; border-radius: 40px; color: white; font-size: 0.75rem; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+        .exec-btn:hover { background: #6366f1; }
+        
+        .form-section, .logs-section {
+            background: rgba(255, 255, 255, 0.03);
+            -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 24px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .section-title { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1rem; font-weight: 500; }
+        .form-group { margin-bottom: 1rem; }
+        label { font-size: 0.75rem; font-weight: 500; display: block; margin-bottom: 0.35rem; }
+        input, select, textarea { width: 100%; padding: 0.7rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; font-family: monospace; font-size: 0.8rem; color: inherit; }
+        .btn-primary { background: linear-gradient(135deg, #6366f1, #8b5cf6); border: none; padding: 0.7rem; border-radius: 40px; color: white; font-weight: 600; cursor: pointer; width: 100%; }
+        
+        .log-container { height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.7rem; }
+        .log-entry { margin-bottom: 0.4rem; padding-bottom: 0.4rem; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        
+        .theme-toggle {
+            position: fixed; bottom: 1.5rem; right: 1.5rem;
+            width: 44px; height: 44px; border-radius: 60px;
+            background: rgba(99, 102, 241, 0.9); border: none;
+            cursor: pointer; font-size: 1.1rem; z-index: 1000;
+        }
+        
+        .loading-spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite; margin-right: 5px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        /* New classes for elements previously using inline styles */
+        .sidebar-divider { height: 1px; background: rgba(255,255,255,0.06); margin: 1rem 0; }
+        .search-container { margin: 1rem 0; padding: 0 0.5rem; }
+        .search-input { width: 100%; padding: 0.5rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 40px; }
+        .logs-header { display: flex; justify-content: space-between; margin-bottom: 1rem; align-items: center; }
+        .logs-title { margin-bottom: 0 !important; }
+        .clear-btn { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); padding: 0.3rem 0.8rem; border-radius: 40px; cursor: pointer; transition: all 0.2s; color: inherit; }
+        .clear-btn:hover { background: rgba(239,68,68,0.25); border-color: rgba(239,68,68,0.5); }
+        
+        @media (max-width: 768px) { .sidebar { display: none; } .main-content { max-width: 100%; padding: 1.5rem; } }
+    </style>
+</head>
+<body class="theme-dark">
+    <div class="app-wrapper">
+        <aside class="sidebar">
+            <div class="logo-area"><div class="logo">n8n<span>Controller</span></div><small>webhook panel</small></div>
+            <div class="nav-item active" data-section="overview"><i class="fa-regular fa-chart-pie"></i> <span>Overview</span></div>
+            <div class="nav-item" data-section="personal"><i class="fa-regular fa-user"></i> <span>Personal</span></div>
+            <div class="nav-item" data-section="chat"><i class="fa-regular fa-comment"></i> <span>Chat</span></div>
+            <div class="nav-item" data-section="prowew"><i class="fa-regular fa-chart-line"></i> <span>PROWEW</span></div>
+            <div class="nav-item" data-section="templates"><i class="fa-regular fa-copy"></i> <span>Templates</span></div>
+            <div class="nav-item" data-section="insights"><i class="fa-regular fa-lightbulb"></i> <span>Insights</span></div>
+            <div class="nav-item" data-section="help"><i class="fa-regular fa-circle-question"></i> <span>Help</span></div>
+            <div class="sidebar-divider"></div>
+            <div class="nav-item" data-section="settings"><i class="fa-regular fa-gear"></i> <span>Settings</span></div>
+            <div class="search-container"><input type="text" placeholder="Buscar..." id="sidebarSearch" class="search-input" aria-label="Buscar"></div>
+            <div class="nav-item" data-section="vinculos"><i class="fa-regular fa-link"></i> <span>Vínculos</span></div>
+            <div class="nav-item" data-section="logs"><i class="fa-regular fa-clock"></i> <span>Logs</span></div>
+        </aside>
+
+        <main class="main-content">
+            <div class="header">
+                <div class="badge"><span class="badge-dot"></span><span>n8n · Local Controller</span></div>
+                <h1>Webhooks Locales</h1>
+                <p class="subtitle">Disparadores bajo demanda para tus automatizaciones</p>
+            </div>
+
+            <div class="cards-grid" id="cardsGrid"></div>
+
+            <div class="form-section">
+                <div class="section-title"><i class="fa-regular fa-terminal"></i><span>Webhook Personalizado</span></div>
+                <div class="form-group"><label for="customWebhookId">Webhook ID / Path</label><input type="text" id="customWebhookId" placeholder="Ej: ai-signal, purga-drive-total"></div>
+                <div class="form-group"><label for="customMethod">Método HTTP</label><select id="customMethod"><option value="POST">POST</option><option value="GET">GET</option></select></div>
+                <div class="form-group"><label for="customPayload">Payload (JSON opcional)</label><textarea id="customPayload" rows="2" placeholder='{"test": true}'></textarea></div>
+                <button class="btn-primary" id="sendCustomBtn"><i class="fa-regular fa-paper-plane"></i> Ejecutar Webhook</button>
+            </div>
+
+            <div class="logs-section">
+                <div class="logs-header">
+                    <div class="section-title logs-title"><i class="fa-regular fa-list"></i><span>Registro de Ejecuciones</span></div>
+                    <button class="clear-btn" id="clearLogsBtn"><i class="fa-regular fa-trash-alt"></i> Limpiar</button>
+                </div>
+                <div class="log-container" id="logContainer"><div class="log-entry">📡 Panel listo. Esperando acciones...</div></div>
+            </div>
+        </main>
+    </div>
+
+    <button class="theme-toggle" id="themeToggleBtn" aria-label="Cambiar tema"><i class="fa-regular fa-moon"></i></button>
+
+    <script>
+        const workflows = [
+            { id: 'purga-drive-total', titulo: 'Purga Drive Total', descripcion: 'Elimina todos los archivos de Google Drive (usar con cuidado)', metodo: 'POST', icono: 'fa-trash-alt', color: '#ef4444' },
+            { id: 'ai-signal', titulo: 'AI Newsletter Manual', descripcion: 'Genera y envía newsletter de IA bajo demanda', metodo: 'POST', icono: 'fa-newspaper', color: '#22c55e' }
+        ];
+
+        function addLog(message, type = 'info') {
+            const container = document.getElementById('logContainer');
+            const time = new Date().toLocaleTimeString();
+            const icons = { success: '✅', error: '❌', info: '📡', warning: '⚠️' };
+            const log = document.createElement('div');
+            log.className = 'log-entry';
+            log.innerHTML = `[${time}] ${icons[type] || 'ℹ️'} ${message}`;
+            container.appendChild(log);
+            container.scrollTop = container.scrollHeight;
+            if (container.children.length > 80) container.removeChild(container.children[0]);
+        }
+
+        function showToast(msg, isError = false) {
+            Toastify({ text: msg, duration: 3000, gravity: "top", position: "right", style: { background: isError ? "#ef4444" : "#22c55e" } }).showToast();
+        }
+
+        async function ejecutarWebhook(webhookId, method = 'POST', payload = null) {
+            const url = `/webhook/${webhookId}`;
+            addLog(`🚀 Enviando ${method} a ${url}`, 'info');
+            
+            const headers = { 'Content-Type': 'application/json' };
+            const options = { method, headers };
+            if (payload && (method === 'POST' || method === 'PUT')) {
+                options.body = JSON.stringify(payload);
+            }
+            
+            try {
+                const res = await fetch(url, options);
+                const text = await res.text();
+                if (res.ok) {
+                    addLog(`✅ ${webhookId} → OK (${res.status})`, 'success');
+                    showToast(`✅ ${webhookId} ejecutado correctamente`);
+                    return { success: true };
+                } else {
+                    throw new Error(`HTTP ${res.status}: ${text.substring(0, 80)}`);
+                }
+            } catch (err) {
+                addLog(`❌ ${webhookId} → ${err.message}`, 'error');
+                showToast(`❌ Error: ${err.message}`, true);
+                return { success: false };
+            }
+        }
+
+        function renderCards() {
+            const container = document.getElementById('cardsGrid');
+            container.innerHTML = workflows.map(w => `
+                <div class="workflow-card">
+                    <div class="card-icon" style="background: ${w.color}15;"><i class="fa-regular ${w.icono}" style="color: ${w.color};"></i></div>
+                    <div class="card-title">${w.titulo}</div>
+                    <div class="card-desc">${w.descripcion}</div>
+                    <div class="card-meta">
+                        <span class="method" style="background: ${w.color}20; color: ${w.color};">${w.metodo}</span>
+                        <button class="exec-btn" data-id="${w.id}" data-method="${w.metodo}"><i class="fa-regular fa-play"></i> Ejecutar</button>
+                    </div>
+                </div>
+            `).join('');
+            
+            document.querySelectorAll('.exec-btn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const id = btn.dataset.id, method = btn.dataset.method;
+                    btn.disabled = true;
+                    btn.innerHTML = '<span class="loading-spinner"></span> Ejecutando...';
+                    await ejecutarWebhook(id, method);
+                    btn.innerHTML = '<i class="fa-regular fa-play"></i> Ejecutar';
+                    btn.disabled = false;
+                });
+            });
+        }
+
+        function setTheme(theme) {
+            document.body.classList.remove('theme-dark', 'theme-light');
+            document.body.classList.add(`theme-${theme}`);
+            localStorage.setItem('theme', theme);
+            const icon = document.querySelector('#themeToggleBtn i');
+            const btn = document.getElementById('themeToggleBtn');
+            if (theme === 'dark') { 
+                icon.classList.remove('fa-sun'); 
+                icon.classList.add('fa-moon');
+                btn.setAttribute('aria-label', 'Cambiar a modo claro');
+            }
+            else { 
+                icon.classList.remove('fa-moon'); 
+                icon.classList.add('fa-sun');
+                btn.setAttribute('aria-label', 'Cambiar a modo oscuro');
+            }
+        }
+
+        document.getElementById('themeToggleBtn').onclick = () => {
+            const newTheme = document.body.classList.contains('theme-dark') ? 'light' : 'dark';
+            setTheme(newTheme);
+        };
+
+        document.getElementById('sendCustomBtn').onclick = async () => {
+            const id = document.getElementById('customWebhookId').value.trim();
+            const method = document.getElementById('customMethod').value;
+            let payload = null;
+            const rawPayload = document.getElementById('customPayload').value.trim();
+            if (rawPayload) {
+                try { payload = JSON.parse(rawPayload); } 
+                catch(e) { showToast('❌ JSON inválido', true); return; }
+            }
+            if (!id) { showToast('❌ Ingresa un Webhook ID', true); return; }
+            const btn = document.getElementById('sendCustomBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading-spinner"></span> Enviando...';
+            await ejecutarWebhook(id, method, payload);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-regular fa-paper-plane"></i> Ejecutar Webhook';
+        };
+
+        document.getElementById('clearLogsBtn').onclick = () => {
+            document.getElementById('logContainer').innerHTML = '<div class="log-entry">🧹 Logs limpiados</div>';
+            addLog('Historial reiniciado', 'info');
+        };
+
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+                document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+                this.classList.add('active');
+                if (this.dataset.section === 'logs') document.getElementById('logContainer').scrollIntoView({ behavior: 'smooth' });
+            });
+        });
+
+        document.getElementById('sidebarSearch').addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            document.querySelectorAll('.nav-item').forEach(item => {
+                const text = item.innerText.toLowerCase();
+                item.style.display = (term === '' || text.includes(term)) ? 'flex' : 'none';
+            });
+        });
+
+        renderCards();
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        setTheme(savedTheme);
+        addLog(`🎛️ Panel listo. Proxy activo en /webhook → n8n local`, 'success');
+    </script>
+</body>
+</html>

@@ -1,0 +1,257 @@
+{
+  "name": "Purga Drive Total - Panel",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "purga-drive-total",
+        "options": {}
+      },
+      "name": "Webhook Panel",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -256,
+        128
+      ],
+      "webhookId": "purga-drive-total",
+      "id": "b6be531e-86f9-4974-822e-0397acebaa5c"
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/drive/v3/files",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "pageSize",
+              "value": "1000"
+            },
+            {
+              "name": "fields",
+              "value": "files(id, name)"
+            },
+            {
+              "name": "q",
+              "value": "trashed = false"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Listar Archivos Activos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "7aed37c4-0841-449f-a43b-8d212b8244ee",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "XXfqb1Ajzkr6Ayzk",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const files = $input.first().json.files || [];\nconsole.log(`Archivos activos: ${files.length}`);\nif (files.length === 0) return [];\nreturn files.map(f => ({ json: { fileId: f.id, fileName: f.name } }));\n"
+      },
+      "name": "Extraer Activos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ],
+      "id": "b8693d2d-7711-4ee9-ae37-695fd9db678a"
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "=https://www.googleapis.com/drive/v3/files/{{ $json.fileId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "name": "Borrar Activos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        0
+      ],
+      "id": "e35a928e-4354-4f73-9528-0f279e40b473",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "XXfqb1Ajzkr6Ayzk",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/drive/v3/files",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "pageSize",
+              "value": "1000"
+            },
+            {
+              "name": "fields",
+              "value": "files(id, name)"
+            },
+            {
+              "name": "q",
+              "value": "trashed = true"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Listar Papelera",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        240
+      ],
+      "id": "c48388ce-2746-4a94-9585-dec67b4373bf",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "XXfqb1Ajzkr6Ayzk",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const files = $input.first().json.files || [];\nconsole.log(`Archivos en papelera: ${files.length}`);\nif (files.length === 0) return [];\nreturn files.map(f => ({ json: { fileId: f.id, fileName: f.name } }));\n"
+      },
+      "name": "Extraer Papelera",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        240
+      ],
+      "id": "d0132629-9a59-4c18-9689-8eb38ded0d4d"
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "=https://www.googleapis.com/drive/v3/files/{{ $json.fileId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "name": "Borrar Papelera",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        240
+      ],
+      "id": "31cad260-c570-47f4-8395-a867f798eb1b",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "XXfqb1Ajzkr6Ayzk",
+          "name": "Google Drive account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Panel": {
+      "main": [
+        [
+          {
+            "node": "Listar Archivos Activos",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Listar Papelera",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Listar Archivos Activos": {
+      "main": [
+        [
+          {
+            "node": "Extraer Activos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer Activos": {
+      "main": [
+        [
+          {
+            "node": "Borrar Activos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Listar Papelera": {
+      "main": [
+        [
+          {
+            "node": "Extraer Papelera",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer Papelera": {
+      "main": [
+        [
+          {
+            "node": "Borrar Papelera",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "98dbbb7e-a985-49ac-b33e-bfe9c72378da",
+  "meta": {
+    "instanceId": "c114ee45638609b7a2777675a37a3cc64238effc8dda6ddee8bd745b5af3012f"
+  },
+  "id": "TUb4Iw8nTPtxybBc",
+  "tags": []
+}
